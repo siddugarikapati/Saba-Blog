@@ -32,11 +32,14 @@ const upload = multer({
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static('uploads'));
-app.use(cors({
-  origin: 'https://saba-blog.vercel.app',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "https://saba-blog.vercel.app", // Frontend URL
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true, // Allow cookies to be sent
+  })
+);
+
 
 // MongoDB connection
 mongoose.connect('mongodb+srv://saba:blog@cluster0.1w49u.mongodb.net/')
@@ -45,19 +48,16 @@ mongoose.connect('mongodb+srv://saba:blog@cluster0.1w49u.mongodb.net/')
 
 // Middleware for token authentication
 const authenticateToken = (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token) {
-    return res.status(401).json({ error: 'Token not provided' });
-  }
+  const token = req.cookies.token; // Extract the token from cookies
+  if (!token) return res.status(401).json({ error: "Token not provided" });
 
-  jwt.verify(token, secret, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    req.user = decoded;
+  jwt.verify(token, secret, (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid token" });
+    req.user = user; // Attach user info to the request
     next();
   });
 };
+
 
 // Routes
 
@@ -75,26 +75,32 @@ app.post('/register', async (req, res) => {
 });
 
 // Login
-app.post('/login', async (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
-    const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(400).json({ error: 'User not found' });
-    }
+    const userDoc = await User.findOne({ username });
+    if (!userDoc) return res.status(400).json({ error: "User not found" });
 
-    const isPasswordValid = bcrypt.compareSync(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ error: 'Wrong credentials' });
+    const passOk = bcrypt.compareSync(password, userDoc.password);
+    if (passOk) {
+      jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
+        if (err) throw err;
+        res
+          .cookie("token", token, {
+            httpOnly: true,
+            secure: true, // Set true for HTTPS
+            sameSite: "none", // Allow cross-origin cookies
+          })
+          .json({ id: userDoc._id, username });
+      });
+    } else {
+      res.status(400).json({ error: "Wrong credentials" });
     }
-
-    const token = jwt.sign({ id: user._id, username: user.username }, secret, { expiresIn: '1d' });
-    res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' });
-    res.json({ id: user._id, username: user.username });
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 
 // Profile
 app.get('/profile', authenticateToken, (req, res) => {
@@ -102,10 +108,16 @@ app.get('/profile', authenticateToken, (req, res) => {
 });
 
 // Logout
-app.post('/logout', (req, res) => {
-  res.clearCookie('token', { httpOnly: true, secure: true, sameSite: 'none' });
-  res.json({ message: 'Logged out successfully' });
+app.post("/logout", (req, res) => {
+  res
+    .cookie("token", "", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    })
+    .json("Logged out");
 });
+
 
 // Create Post
 app.post('/post', upload.single('file'), authenticateToken, async (req, res) => {
