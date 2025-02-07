@@ -203,7 +203,36 @@ app.delete('/post/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Error deleting post' });
   }
 });
+app.post('/post/:id/like', authenticateToken, async (req, res) => {
+  const { id } = req.params; 
+  const userId = req.user.id; // Get the authenticated user's ID
 
+  try {
+    const post = await Posts.findById(id);
+
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Check if the user has already liked the post
+    const hasLiked = post.likes.includes(userId);
+
+    if (hasLiked) {
+      // If the user has already liked the post, remove their like
+      post.likes = post.likes.filter(user => String(user) !== String(userId));
+    } else {
+      // If the user hasn't liked the post yet, add their like
+      post.likes.push(userId);
+    }
+
+    await post.save(); // Save the updated post
+
+    res.json({ liked: !hasLiked, likesCount: post.likes.length }); // Respond with the new like state and count
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred while processing the like action' });
+  }
+});
 // Start server
 app.listen(8000, () => {
   console.log('Server is running on port 8000');
