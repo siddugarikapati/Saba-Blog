@@ -13,7 +13,7 @@ export default function Post({ _id, title, summary, cover, createdAt, author, in
   const handleLikeClick = async () => {
     setLoading(true); 
     try {
-      const response = await fetch(`http://localhost:8000/post/${_id}/like`, {
+      const response = await fetch(`https://saba-blog.onrender.com/post/${_id}/like`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include' // Ensure user authentication token is sent
@@ -37,7 +37,7 @@ export default function Post({ _id, title, summary, cover, createdAt, author, in
     <div className="post">
       <div className="image">
         <Link to={`/post/${_id}`}>
-          <img src={`http://localhost:8000/${cover}`} alt={title} />
+          <img src={`https://saba-blog.onrender.com/${cover}`} alt={title} />
         </Link>
       </div>
       <div className="texts">
