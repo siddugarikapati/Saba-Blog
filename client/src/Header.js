@@ -10,7 +10,7 @@ export default function Header() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch('http://localhost:8000/profile', {
+        const response = await fetch('https://saba-blog.onrender.com/profile', {
           credentials: 'include', // Include cookies
         });
 
@@ -31,7 +31,7 @@ export default function Header() {
 
   const logout = async () => {
     try {
-      await fetch('http://localhost:8000/logout', {
+      await fetch('https://saba-blog.onrender.com/logout', {
         credentials: 'include', // Include cookies
         method: 'POST', 
       });
